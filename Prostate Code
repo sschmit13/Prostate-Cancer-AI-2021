@@ -2,7 +2,7 @@
  "cells": [
   {
    "cell_type": "code",
-   "execution_count": 6,
+   "execution_count": 1,
    "id": "d9584026-8b5e-4c74-ac13-f21c3edb27c0",
    "metadata": {},
    "outputs": [],
@@ -51,7 +51,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 15,
+   "execution_count": 60,
    "id": "0c1d8761-eeee-4a80-a2f9-95018c44db3b",
    "metadata": {},
    "outputs": [
@@ -81,11 +81,11 @@
        "          [0.0546, 0.0588, 0.0606,  ..., 0.3059, 0.3735, 0.3955],\n",
        "          [0.0576, 0.0633, 0.0662,  ..., 0.4029, 0.4232, 0.3897],\n",
        "          [0.0544, 0.0603, 0.0645,  ..., 0.4556, 0.4087, 0.3261]]]),\n",
-       " tensor(1),\n",
-       " tensor([69,  5,  7]))"
+       " tensor(1.),\n",
+       " tensor([69.,  5.,  7.]))"
       ]
      },
-     "execution_count": 15,
+     "execution_count": 60,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -113,14 +113,15 @@
     "        #makes sense because we want to access specific BASED ON THE INDEX designated in the csv\n",
     "        image = torchvision.transforms.functional.to_tensor(io.imread(img_path))\n",
     "        \n",
-    "        label = torch.from_numpy(np.array(self.img_labels.iloc[idx, 1])).long()\n",
+    "        label = self.img_labels.iloc[idx, 1]\n",
+    "        label = torch.from_numpy(np.array(label)).float()\n",
     "#         label = torch.tensor(int(self.img_labels.iloc[idx, 1]))\n",
     "                \n",
     "\n",
     "        tabular = self.tabular.iloc[idx, 1:] #tabular data starts in second column of csv (after ID's)\n",
     "        tabular = tabular[[\"age\", \"PSA\", \"total gleason\"]] \n",
     "        tabular = tabular.tolist()\n",
-    "        tabular = torch.from_numpy(np.array(tabular)).long()\n",
+    "        tabular = torch.from_numpy(np.array(tabular)).float()\n",
     "#         tabular = torch.tensor(tabular)\n",
     "        \n",
     "        if self.transform:\n",
@@ -140,40 +141,37 @@
     "# prostate_data = CustomImageDataset(redcap_file = my_redcap_file, annotations_file = my_annotations_file, img_dir = my_img_dir, transform = transforms.ToTensor(), target_transform=None)\n",
     "# prostate_data[0]\n",
     "\n",
-    "prostate_data = CustomImageDataset(redcap_file = my_redcap_file, annotations_file = my_annotations_file, img_dir = my_img_dir, transform = transforms.Compose([transforms.Resize(256), transforms.CenterCrop(224)]), target_transform=None)\n",
+    "prostate_data = CustomImageDataset(redcap_file = my_redcap_file, annotations_file = my_annotations_file, img_dir = my_img_dir, transform = transforms.Compose([transforms.Resize(256),\n",
+    "transforms.CenterCrop(224)]), target_transform=None)\n",
     "\n",
     "prostate_data[2]"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": null,
-   "id": "7a8f3e27-e18d-46be-ab39-1bcec57731a3",
-   "metadata": {},
-   "outputs": [],
-   "source": []
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 16,
+   "execution_count": 61,
    "id": "9d377a02-b28f-422a-ab23-edf33ea48a6d",
    "metadata": {},
    "outputs": [],
    "source": [
     "#hperparameters for 1a\n",
     "learning_rate = 1e-3\n",
-    "batch_size = 1\n",
     "epochs = 3\n",
     "\n",
     "#dataloaders for 1a\n",
     "train_set, test_set = torch.utils.data.random_split(prostate_data, [3, 2])\n",
-    "train_loader = DataLoader(dataset=train_set, batch_size=2, shuffle=True)\n",
-    "test_loader = DataLoader(dataset=test_set, batch_size=2, shuffle=True)\n"
+    "\n",
+    "# #categorical targets (labels) must be integers aka longtensors, inputs must be floats\n",
+    "# train_set = train_set.type(torch.LongTensor)\n",
+    "# test_set = test_set.type(torch.LongTensor)\n",
+    "\n",
+    "train_loader = DataLoader(dataset=train_set, batch_size=1, shuffle=True)\n",
+    "test_loader = DataLoader(dataset=test_set, batch_size=1, shuffle=True)\n"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 17,
+   "execution_count": 62,
    "id": "f8980439-9156-426a-a92e-53874642f446",
    "metadata": {},
    "outputs": [
@@ -202,7 +200,7 @@
     "class MyMLP(nn.Module):\n",
     "    def __init__(self):\n",
     "        super(MyMLP, self).__init__()\n",
-    "        self.flatten = nn.Flatten()\n",
+    "        self.flatten = nn.Flatten() #believe that flattening is not necessary now because it's not an image? \n",
     "        self.linear_relu_stack = nn.Sequential(\n",
     "            nn.Linear(3, 3), #only 3 fields in my \"practice data\"\n",
     "            nn.ReLU(),\n",
@@ -223,63 +221,48 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 18,
-   "id": "d585ca26-57fc-44d5-b711-d2bdbabbf0e1",
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "tensor([[69,  5,  7],\n",
-      "        [66,  6,  7]])\n"
-     ]
-    }
-   ],
-   "source": [
-    "for batch, (image, label, tabular) in enumerate(test_loader):\n",
-    "    tabular.float()\n",
-    "    print(tabular)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 19,
+   "execution_count": 64,
    "id": "c9507414-c82b-4768-9b20-a7a99796d9b0",
-   "metadata": {},
+   "metadata": {
+    "tags": []
+   },
    "outputs": [
     {
      "name": "stdout",
      "output_type": "stream",
      "text": [
       "Epoch 1\n",
-      "-------------------------------\n"
-     ]
-    },
-    {
-     "ename": "RuntimeError",
-     "evalue": "expected scalar type Float but found Long",
-     "output_type": "error",
-     "traceback": [
-      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
-      "\u001b[0;31mRuntimeError\u001b[0m                              Traceback (most recent call last)",
-      "\u001b[0;32m<ipython-input-19-ea5b2943de56>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[1;32m     42\u001b[0m \u001b[0;32mfor\u001b[0m \u001b[0mt\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mrange\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mepochs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     43\u001b[0m     \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34mf\"Epoch {t+1}\\n-------------------------------\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 44\u001b[0;31m     \u001b[0mtrain_loop\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtrain_loader\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mmodelA\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mloss_fn\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0moptimizer\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     45\u001b[0m     \u001b[0mtest_loop\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtest_loader\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mmodelA\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mloss_fn\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     46\u001b[0m \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"Done!\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;32m<ipython-input-19-ea5b2943de56>\u001b[0m in \u001b[0;36mtrain_loop\u001b[0;34m(dataloader, model, loss_fn, optimizer)\u001b[0m\n\u001b[1;32m      9\u001b[0m     \u001b[0;32mfor\u001b[0m \u001b[0mbatch\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m(\u001b[0m\u001b[0mimage\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mlabel\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtabular\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32min\u001b[0m \u001b[0menumerate\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mdataloader\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     10\u001b[0m         \u001b[0;31m# Compute prediction and loss\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 11\u001b[0;31m         \u001b[0mpred\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtabular\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     12\u001b[0m         \u001b[0mloss\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mloss_fn\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mpred\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mlabel\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;31m#not sure if this will work...will it know what is the label and tabular data?\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     13\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/torch/nn/modules/module.py\u001b[0m in \u001b[0;36m_call_impl\u001b[0;34m(self, *input, **kwargs)\u001b[0m\n\u001b[1;32m    887\u001b[0m             \u001b[0mresult\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_slow_forward\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0minput\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    888\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 889\u001b[0;31m             \u001b[0mresult\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mforward\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0minput\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    890\u001b[0m         for hook in itertools.chain(\n\u001b[1;32m    891\u001b[0m                 \u001b[0m_global_forward_hooks\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mvalues\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;32m<ipython-input-17-c2815e5ed2f6>\u001b[0m in \u001b[0;36mforward\u001b[0;34m(self, x)\u001b[0m\n\u001b[1;32m     17\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0mforward\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mx\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     18\u001b[0m         \u001b[0mx\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mflatten\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mx\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 19\u001b[0;31m         \u001b[0mlogits\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mlinear_relu_stack\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mx\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     20\u001b[0m         \u001b[0;32mreturn\u001b[0m \u001b[0mlogits\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     21\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/torch/nn/modules/module.py\u001b[0m in \u001b[0;36m_call_impl\u001b[0;34m(self, *input, **kwargs)\u001b[0m\n\u001b[1;32m    887\u001b[0m             \u001b[0mresult\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_slow_forward\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0minput\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    888\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 889\u001b[0;31m             \u001b[0mresult\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mforward\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0minput\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    890\u001b[0m         for hook in itertools.chain(\n\u001b[1;32m    891\u001b[0m                 \u001b[0m_global_forward_hooks\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mvalues\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/torch/nn/modules/container.py\u001b[0m in \u001b[0;36mforward\u001b[0;34m(self, input)\u001b[0m\n\u001b[1;32m    117\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0mforward\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0minput\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    118\u001b[0m         \u001b[0;32mfor\u001b[0m \u001b[0mmodule\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 119\u001b[0;31m             \u001b[0minput\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mmodule\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0minput\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    120\u001b[0m         \u001b[0;32mreturn\u001b[0m \u001b[0minput\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    121\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/torch/nn/modules/module.py\u001b[0m in \u001b[0;36m_call_impl\u001b[0;34m(self, *input, **kwargs)\u001b[0m\n\u001b[1;32m    887\u001b[0m             \u001b[0mresult\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_slow_forward\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0minput\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    888\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 889\u001b[0;31m             \u001b[0mresult\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mforward\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0minput\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    890\u001b[0m         for hook in itertools.chain(\n\u001b[1;32m    891\u001b[0m                 \u001b[0m_global_forward_hooks\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mvalues\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/torch/nn/modules/linear.py\u001b[0m in \u001b[0;36mforward\u001b[0;34m(self, input)\u001b[0m\n\u001b[1;32m     92\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     93\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0mforward\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0minput\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mTensor\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m->\u001b[0m \u001b[0mTensor\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 94\u001b[0;31m         \u001b[0;32mreturn\u001b[0m \u001b[0mF\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mlinear\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0minput\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mweight\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mbias\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     95\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     96\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0mextra_repr\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m->\u001b[0m \u001b[0mstr\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/torch/nn/functional.py\u001b[0m in \u001b[0;36mlinear\u001b[0;34m(input, weight, bias)\u001b[0m\n\u001b[1;32m   1751\u001b[0m     \u001b[0;32mif\u001b[0m \u001b[0mhas_torch_function_variadic\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0minput\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mweight\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1752\u001b[0m         \u001b[0;32mreturn\u001b[0m \u001b[0mhandle_torch_function\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mlinear\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m(\u001b[0m\u001b[0minput\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mweight\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0minput\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mweight\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mbias\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mbias\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1753\u001b[0;31m     \u001b[0;32mreturn\u001b[0m \u001b[0mtorch\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_C\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_nn\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mlinear\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0minput\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mweight\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mbias\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1754\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1755\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
-      "\u001b[0;31mRuntimeError\u001b[0m: expected scalar type Float but found Long"
+      "-------------------------------\n",
+      "loss: 100.000000  [    0/    3]\n",
+      "loss: 100.000000  [    1/    3]\n",
+      "loss: 0.000000  [    2/    3]\n",
+      "Test Error: \n",
+      " Accuracy: 100.0%, Avg loss: 0.000000 \n",
+      "\n",
+      "Epoch 2\n",
+      "-------------------------------\n",
+      "loss: 100.000000  [    0/    3]\n",
+      "loss: 0.000000  [    1/    3]\n",
+      "loss: 100.000000  [    2/    3]\n",
+      "Test Error: \n",
+      " Accuracy: 100.0%, Avg loss: 0.000000 \n",
+      "\n",
+      "Epoch 3\n",
+      "-------------------------------\n",
+      "loss: 100.000000  [    0/    3]\n",
+      "loss: 0.000000  [    1/    3]\n",
+      "loss: 100.000000  [    2/    3]\n",
+      "Test Error: \n",
+      " Accuracy: 100.0%, Avg loss: 0.000000 \n",
+      "\n",
+      "Done!\n"
      ]
     }
    ],
    "source": [
     "#1c. continued\n",
     "optimizer = torch.optim.SGD(modelA.parameters(), lr=learning_rate)\n",
-    "loss_fn = nn.CrossEntropyLoss() \n",
+    "loss_fn = nn.BCELoss()\n",
     "\n",
     "\n",
     "#define the train and test loops\n",
@@ -288,7 +271,9 @@
     "    for batch, (image, label, tabular) in enumerate(dataloader):        \n",
     "        # Compute prediction and loss\n",
     "        pred = model(tabular)\n",
-    "        loss = loss_fn(pred, label) #not sure if this will work...will it know what is the label and tabular data?\n",
+    "        label = torch.unsqueeze(label, 0) #gets the target size to be the same as the models' output size [1,1] because batch size is 1 and then returns one prediction each batch\n",
+    "                                        #ASK ABOUT THIS TO MAKE SURE IT'S OK\n",
+    "        loss = loss_fn(pred, label) \n",
     "        \n",
     "        # Backpropagation\n",
     "        optimizer.zero_grad()  #sets gradients of all optimized torch tensors to 0\n",
@@ -298,8 +283,8 @@
     "                        #Autograd then calculates and stores the gradients for each model parameter in the parameter’s .grad attribute.\n",
     "        optimizer.step() #Finally, we call .step() to initiate gradient descent. The optimizer adjusts each parameter by its gradient stored in .grad\n",
     "\n",
-    "        if batch % 100 == 0:\n",
-    "            loss, current = loss.item(), batch * len(X)\n",
+    "        if batch % 1 == 0:\n",
+    "            loss, current = loss.item(), batch * len(label)\n",
     "            print(f\"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]\")\n",
     "\n",
     "\n",
@@ -310,8 +295,9 @@
     "    with torch.no_grad():\n",
     "        for image, label, tabular in dataloader:\n",
     "            pred = model(tabular)\n",
+    "            label = torch.unsqueeze(label, 0)\n",
     "            test_loss += loss_fn(pred, label).item() #compares the label (y) with the prediction based on loss fn defined above\n",
-    "            correct += (pred.argmax(1) == y).type(torch.float).sum().item()\n",
+    "            correct += (pred.argmax(1) == label).type(torch.float).sum().item()  #why is \"1\" an argument of argmax?\n",
     "            \n",
     "    test_loss /= size\n",
     "    correct /= size\n",
@@ -323,6 +309,16 @@
     "    train_loop(train_loader, modelA, loss_fn, optimizer)\n",
     "    test_loop(test_loader, modelA, loss_fn)\n",
     "print(\"Done!\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f238ddb6-50e1-4dfd-9452-192e7e5dccce",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# end of code for tabular data—below work on densenet once tabular figured out"
    ]
   },
   {
