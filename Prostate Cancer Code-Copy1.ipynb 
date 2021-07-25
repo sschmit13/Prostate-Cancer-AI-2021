@@ -30,7 +30,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 2,
+   "execution_count": 65,
    "id": "240ac03e-8662-4dee-860f-dbe6929ae5b3",
    "metadata": {},
    "outputs": [],
@@ -53,7 +53,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 3,
+   "execution_count": 66,
    "id": "0c1d8761-eeee-4a80-a2f9-95018c44db3b",
    "metadata": {},
    "outputs": [
@@ -61,7 +61,7 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "(tensor(0.), tensor([28.0000,  0.0000,  0.0000,  4.0000, 22.0000,  5.5000,  7.0000, 53.0000]))\n"
+      "(tensor(0.), tensor([28.2000,  0.0000,  0.0000,  7.1000, 43.2000,  5.5000,  6.8000, 56.0000]))\n"
      ]
     }
    ],
@@ -69,24 +69,19 @@
     "#1a and #2a — getting the datasets ready (redcap_file has tabular data, annotations_file has the labels, img_dir holds the MRI's)\n",
     "\n",
     "class TabularDataset(Dataset):\n",
-    "    def __init__(self, redcap_file = None, annotations_file = None, transform=None, target_transform=None):\n",
-    "        self.img_labels = pd.read_csv(annotations_file, header=0, index_col='record_id') #default header=0\n",
-    "        self.tabular = pd.read_csv(redcap_file, header=0)\n",
+    "    def __init__(self, redcap_file = None, transform=None, target_transform=None):\n",
+    "        self.tabular = pd.read_csv(redcap_file, index_col='record_id', header=0)\n",
     "        self.transform = transform\n",
     "        self.target_transform = target_transform\n",
-    "\n",
     "        \n",
     "    def __len__(self):\n",
-    "        return len(self.img_labels)\n",
+    "        return len(self.tabular)\n",
     "\n",
     "    def __getitem__(self, idx):      \n",
-    "        x = self.tabular.iloc[idx, 0] #finds relevant record ID \n",
-    "        label = self.img_labels.loc[x, 'margins_positive'] #link record ID to margin label in separate csv\n",
-    "        \n",
-    "#         label = self.img_labels.iloc[idx, 1]\n",
+    "        label = self.tabular.loc[idx, 'margins_positive'] \n",
     "        label = torch.from_numpy(np.array(label)).float()                \n",
     "\n",
-    "        tabular = self.tabular.iloc[idx, 1:] #tabular data starts in second column of csv (after ID's)\n",
+    "        tabular = self.tabular.loc[idx, ['bmi','tobacco_hx_diagnosis','fh_cancer_any', 'psa_value', 'preop_prostate_vol', 'bx_cores_number_positive', 'bx_gleason_score', 'age_at_diagnosis']]\n",
     "        tabular = tabular.tolist()\n",
     "        tabular = torch.from_numpy(np.array(tabular)).float()\n",
     "        \n",
@@ -98,52 +93,112 @@
     "        return label, tabular  \n",
     "\n",
     "    \n",
-    "my_redcap_file = '/Users/Stephen_Schmit/Documents/SC-BMI/De-identified data/final_finalredcap_dataframe.csv'\n",
-    "my_annotations_file = '/Users/Stephen_Schmit/Documents/SC-BMI/De-identified data/final_cleanlabels_dataframe.csv'\n",
+    "my_redcap_file = '/Users/Stephen_Schmit/Documents/SC-BMI/De-identified data/extra_redcap.csv'\n",
     "\n",
+    "tabular_data = TabularDataset(redcap_file = my_redcap_file, transform = None, target_transform=None)\n",
     "\n",
-    "tabular_data = TabularDataset(redcap_file = my_redcap_file, annotations_file = my_annotations_file, transform = None, target_transform=None)\n",
-    "\n",
-    "print(tabular_data[2])"
+    "print(tabular_data[870])"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 4,
+   "execution_count": 67,
    "id": "9d377a02-b28f-422a-ab23-edf33ea48a6d",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#hperparameters for 1a\n",
+    "learning_rate = 1e-3\n",
+    "epochs = 20\n",
+    "batch_size = 50\n",
+    "\n",
+    "\n",
+    "#dataloaders for 1a, 1767 samples total\n",
+    "train_set, test_set = torch.utils.data.random_split(tabular_data, [1467, 300])\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 71,
+   "id": "58c5a9a7-d90e-40ad-b241-66b09bb053a8",
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "KeyError",
+     "evalue": "65",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mKeyError\u001b[0m                                  Traceback (most recent call last)",
+      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/pandas/core/indexes/base.py\u001b[0m in \u001b[0;36mget_loc\u001b[0;34m(self, key, method, tolerance)\u001b[0m\n\u001b[1;32m   2897\u001b[0m             \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 2898\u001b[0;31m                 \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_engine\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget_loc\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mcasted_key\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   2899\u001b[0m             \u001b[0;32mexcept\u001b[0m \u001b[0mKeyError\u001b[0m \u001b[0;32mas\u001b[0m \u001b[0merr\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32mpandas/_libs/index.pyx\u001b[0m in \u001b[0;36mpandas._libs.index.IndexEngine.get_loc\u001b[0;34m()\u001b[0m\n",
+      "\u001b[0;32mpandas/_libs/index.pyx\u001b[0m in \u001b[0;36mpandas._libs.index.IndexEngine.get_loc\u001b[0;34m()\u001b[0m\n",
+      "\u001b[0;32mpandas/_libs/hashtable_class_helper.pxi\u001b[0m in \u001b[0;36mpandas._libs.hashtable.Int64HashTable.get_item\u001b[0;34m()\u001b[0m\n",
+      "\u001b[0;32mpandas/_libs/hashtable_class_helper.pxi\u001b[0m in \u001b[0;36mpandas._libs.hashtable.Int64HashTable.get_item\u001b[0;34m()\u001b[0m\n",
+      "\u001b[0;31mKeyError\u001b[0m: 65",
+      "\nThe above exception was the direct cause of the following exception:\n",
+      "\u001b[0;31mKeyError\u001b[0m                                  Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-71-c96be8031fd2>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[1;32m      2\u001b[0m \u001b[0mtrain_targets\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;34m[\u001b[0m\u001b[0;34m]\u001b[0m \u001b[0;31m#empty list of all the labels in the train set\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      3\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 4\u001b[0;31m \u001b[0;32mfor\u001b[0m \u001b[0mi\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m(\u001b[0m\u001b[0mtarget\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtabular\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32min\u001b[0m \u001b[0menumerate\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtrain_set\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0;31m#for loop to fill list with all the label tensors\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      5\u001b[0m         \u001b[0mtarget\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtarget\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      6\u001b[0m         \u001b[0mtrain_targets\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtarget\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/torch/utils/data/dataset.py\u001b[0m in \u001b[0;36m__getitem__\u001b[0;34m(self, idx)\u001b[0m\n\u001b[1;32m    328\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    329\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0m__getitem__\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0midx\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 330\u001b[0;31m         \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mdataset\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mindices\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0midx\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    331\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    332\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0m__len__\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m<ipython-input-66-d7bee6d45001>\u001b[0m in \u001b[0;36m__getitem__\u001b[0;34m(self, idx)\u001b[0m\n\u001b[1;32m     11\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     12\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0m__getitem__\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0midx\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 13\u001b[0;31m         \u001b[0mlabel\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtabular\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mloc\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0midx\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m'margins_positive'\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     14\u001b[0m         \u001b[0mlabel\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mtorch\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfrom_numpy\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mnp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0marray\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mlabel\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfloat\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     15\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/pandas/core/indexing.py\u001b[0m in \u001b[0;36m__getitem__\u001b[0;34m(self, key)\u001b[0m\n\u001b[1;32m    871\u001b[0m                     \u001b[0;31m# AttributeError for IntervalTree get_value\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    872\u001b[0m                     \u001b[0;32mpass\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 873\u001b[0;31m             \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_getitem_tuple\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mkey\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    874\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    875\u001b[0m             \u001b[0;31m# we by definition only have the 0th axis\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/pandas/core/indexing.py\u001b[0m in \u001b[0;36m_getitem_tuple\u001b[0;34m(self, tup)\u001b[0m\n\u001b[1;32m   1042\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0m_getitem_tuple\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtup\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mTuple\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1043\u001b[0m         \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1044\u001b[0;31m             \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_getitem_lowerdim\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtup\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1045\u001b[0m         \u001b[0;32mexcept\u001b[0m \u001b[0mIndexingError\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1046\u001b[0m             \u001b[0;32mpass\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/pandas/core/indexing.py\u001b[0m in \u001b[0;36m_getitem_lowerdim\u001b[0;34m(self, tup)\u001b[0m\n\u001b[1;32m    784\u001b[0m                 \u001b[0;31m# We don't need to check for tuples here because those are\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    785\u001b[0m                 \u001b[0;31m#  caught by the _is_nested_tuple_indexer check above.\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 786\u001b[0;31m                 \u001b[0msection\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_getitem_axis\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mkey\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0maxis\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mi\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    787\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    788\u001b[0m                 \u001b[0;31m# We should never have a scalar section here, because\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/pandas/core/indexing.py\u001b[0m in \u001b[0;36m_getitem_axis\u001b[0;34m(self, key, axis)\u001b[0m\n\u001b[1;32m   1108\u001b[0m         \u001b[0;31m# fall thru to straight lookup\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1109\u001b[0m         \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_validate_key\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mkey\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0maxis\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1110\u001b[0;31m         \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_get_label\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mkey\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0maxis\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0maxis\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1111\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1112\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0m_get_slice_axis\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mslice_obj\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mslice\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0maxis\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mint\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/pandas/core/indexing.py\u001b[0m in \u001b[0;36m_get_label\u001b[0;34m(self, label, axis)\u001b[0m\n\u001b[1;32m   1057\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0m_get_label\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mlabel\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0maxis\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mint\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1058\u001b[0m         \u001b[0;31m# GH#5667 this will fail if the label is not present in the axis.\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1059\u001b[0;31m         \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mobj\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mxs\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mlabel\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0maxis\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0maxis\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1060\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1061\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0m_handle_lowerdim_multi_index_axis0\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtup\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mTuple\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/pandas/core/generic.py\u001b[0m in \u001b[0;36mxs\u001b[0;34m(self, key, axis, level, drop_level)\u001b[0m\n\u001b[1;32m   3491\u001b[0m             \u001b[0mloc\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mnew_index\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mindex\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget_loc_level\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mkey\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mdrop_level\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mdrop_level\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   3492\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 3493\u001b[0;31m             \u001b[0mloc\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mindex\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget_loc\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mkey\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   3494\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   3495\u001b[0m             \u001b[0;32mif\u001b[0m \u001b[0misinstance\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mloc\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mnp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mndarray\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/opt/anaconda3/lib/python3.8/site-packages/pandas/core/indexes/base.py\u001b[0m in \u001b[0;36mget_loc\u001b[0;34m(self, key, method, tolerance)\u001b[0m\n\u001b[1;32m   2898\u001b[0m                 \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_engine\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget_loc\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mcasted_key\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   2899\u001b[0m             \u001b[0;32mexcept\u001b[0m \u001b[0mKeyError\u001b[0m \u001b[0;32mas\u001b[0m \u001b[0merr\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 2900\u001b[0;31m                 \u001b[0;32mraise\u001b[0m \u001b[0mKeyError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mkey\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mfrom\u001b[0m \u001b[0merr\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   2901\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   2902\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0mtolerance\u001b[0m \u001b[0;32mis\u001b[0m \u001b[0;32mnot\u001b[0m \u001b[0;32mNone\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mKeyError\u001b[0m: 65"
+     ]
+    }
+   ],
+   "source": [
+    "#weights should be defined as the inverse class frequency defined for each sample\n",
+    "train_targets = [] #empty list of all the labels in the train set \n",
+    "\n",
+    "for i, (target, tabular) in enumerate(train_set): #for loop to fill list with all the label tensors\n",
+    "        target = int(target)\n",
+    "        train_targets.append(target)\n",
+    "        if(i+1):\n",
+    "            continue \n",
+    "    \n",
+    "\n",
+    "_, train_class_counts = np.unique(train_targets, return_counts=True)\n",
+    "train_weights = 1. / torch.tensor(train_class_counts, dtype=torch.float) #tensor of class counts, then reciprocal in same format \n",
+    "train_weights = train_weights[train_targets] # indexes weights tensor to get corresponding weight for each target\n",
+    "\n",
+    "train_sampler = torch.utils.data.sampler.WeightedRandomSampler(weights=train_weights, num_samples=len(train_weights), replacement=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 160,
+   "id": "65e52622-4b68-445a-8515-b59f15339ed0",
    "metadata": {},
    "outputs": [
     {
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "Features batch shape: torch.Size([20, 8])\n",
-      "Labels batch shape: torch.Size([20])\n"
+      "Features batch shape: torch.Size([50, 8])\n",
+      "Labels batch shape: torch.Size([50])\n"
      ]
     }
    ],
    "source": [
-    "#hperparameters for 1a\n",
-    "learning_rate = 1e-3\n",
-    "epochs = 10\n",
-    "batch_size = 20\n",
-    "\n",
-    "#dataloaders for 1a, 1767 samples total\n",
-    "train_set, test_set = torch.utils.data.random_split(tabular_data, [1467, 300])\n",
-    "\n",
     "#Dataloader class makes the train/test sets iterable and defines batch size\n",
-    "train_loader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True)\n",
+    "train_loader = DataLoader(dataset=train_set, batch_size=batch_size, sampler=train_sampler)\n",
     "test_loader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=True)\n",
     "\n",
-    "#check batch sizes...they look correct\n",
+    "# check batch sizes...they look correct\n",
     "train_labels, train_features = next(iter(train_loader))\n",
     "print(f\"Features batch shape: {train_features.size()}\")\n",
-    "print(f\"Labels batch shape: {train_labels.size()}\")"
+    "print(f\"Labels batch shape: {train_labels.size()}\")\n"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 5,
+   "execution_count": 161,
    "id": "f8980439-9156-426a-a92e-53874642f446",
    "metadata": {},
    "outputs": [
@@ -152,8 +207,8 @@
      "output_type": "stream",
      "text": [
       "MyMLP(\n",
-      "  (fc1): Linear(in_features=8, out_features=16, bias=True)\n",
-      "  (fc2): Linear(in_features=16, out_features=1, bias=True)\n",
+      "  (fc1): Linear(in_features=8, out_features=8, bias=True)\n",
+      "  (fc2): Linear(in_features=8, out_features=1, bias=True)\n",
       "  (ReLU): ReLU()\n",
       ")\n"
      ]
@@ -166,10 +221,11 @@
     "class MyMLP(nn.Module):\n",
     "    def __init__(self):\n",
     "        super(MyMLP, self).__init__()\n",
-    "        self.fc1 = nn.Linear(8,16)\n",
-    "        self.fc2 = nn.Linear(16,1)\n",
+    "        self.fc1 = nn.Linear(8,8)\n",
+    "        self.fc2 = nn.Linear(8,1)\n",
     "        self.ReLU = nn.ReLU()\n",
-    "    \n",
+    "#         self.dropout = nn.Dropout(0.8)\n",
+    "        \n",
     "    def get_weights(self):        #not sure what this does but from a tutorial on binary classification\n",
     "        return self.weight\n",
     "\n",
@@ -185,7 +241,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 6,
+   "execution_count": 162,
    "id": "a5d19d71-e41a-460e-a304-b0c21c6faca1",
    "metadata": {},
    "outputs": [],
@@ -198,7 +254,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 7,
+   "execution_count": 163,
    "id": "6d13e262-8fa1-4e90-9340-909e08d39e0f",
    "metadata": {},
    "outputs": [],
@@ -239,7 +295,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 8,
+   "execution_count": 164,
    "id": "4a613981-21bc-4669-a265-8f90883a4084",
    "metadata": {},
    "outputs": [],
@@ -265,7 +321,7 @@
     "            output = model(data.float())\n",
     "                       \n",
     "            #PREDICTIONS\n",
-    "            pred = np.round(output)\n",
+    "            pred = np.round(output) #rounds output to 0 decimals, so if ouptut is 0.6, predicts surgical margin positive\n",
     "            target = target.float()\n",
     "            y_true.extend(target.tolist()) \n",
     "            y_pred.extend(pred.reshape(-1).tolist())\n",
@@ -277,7 +333,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 9,
+   "execution_count": 165,
    "id": "45d70dcb-f168-48c2-a9fb-4d78746e550a",
    "metadata": {},
    "outputs": [
@@ -285,35 +341,65 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "Accuracy on training set is 0.7450579413769598\n",
-      "Accuracy on test set is 0.8266666666666667\n",
+      "Accuracy on training set is 0.4894342194955692\n",
+      "Accuracy on test set is 0.4766666666666667\n",
       "**************************************************************************\n",
-      "Accuracy on training set is 0.787321063394683\n",
-      "Accuracy on test set is 0.83\n",
+      "Accuracy on training set is 0.501704158145876\n",
+      "Accuracy on test set is 0.5\n",
       "**************************************************************************\n",
-      "Accuracy on training set is 0.7955010224948875\n",
-      "Accuracy on test set is 0.8133333333333334\n",
+      "Accuracy on training set is 0.5207907293796864\n",
+      "Accuracy on test set is 0.5066666666666667\n",
       "**************************************************************************\n",
-      "Accuracy on training set is 0.7955010224948875\n",
-      "Accuracy on test set is 0.8133333333333334\n",
+      "Accuracy on training set is 0.5153374233128835\n",
+      "Accuracy on test set is 0.33666666666666667\n",
       "**************************************************************************\n",
-      "Accuracy on training set is 0.7961826857532379\n",
-      "Accuracy on test set is 0.83\n",
+      "Accuracy on training set is 0.5228357191547376\n",
+      "Accuracy on test set is 0.42333333333333334\n",
       "**************************************************************************\n",
-      "Accuracy on training set is 0.7961826857532379\n",
-      "Accuracy on test set is 0.8333333333333334\n",
+      "Accuracy on training set is 0.5303340149965917\n",
+      "Accuracy on test set is 0.6\n",
       "**************************************************************************\n",
-      "Accuracy on training set is 0.7975460122699386\n",
-      "Accuracy on test set is 0.2733333333333333\n",
+      "Accuracy on training set is 0.5303340149965917\n",
+      "Accuracy on test set is 0.29\n",
       "**************************************************************************\n",
-      "Accuracy on training set is 0.7955010224948875\n",
-      "Accuracy on test set is 0.8333333333333334\n",
+      "Accuracy on training set is 0.5419222903885481\n",
+      "Accuracy on test set is 0.3\n",
       "**************************************************************************\n",
-      "Accuracy on training set is 0.7968643490115883\n",
-      "Accuracy on test set is 0.8333333333333334\n",
+      "Accuracy on training set is 0.5310156782549421\n",
+      "Accuracy on test set is 0.5833333333333334\n",
       "**************************************************************************\n",
-      "Accuracy on training set is 0.7961826857532379\n",
-      "Accuracy on test set is 0.83\n",
+      "Accuracy on training set is 0.5644171779141104\n",
+      "Accuracy on test set is 0.6266666666666667\n",
+      "**************************************************************************\n",
+      "Accuracy on training set is 0.5610088616223585\n",
+      "Accuracy on test set is 0.59\n",
+      "**************************************************************************\n",
+      "Accuracy on training set is 0.5480572597137015\n",
+      "Accuracy on test set is 0.3466666666666667\n",
+      "**************************************************************************\n",
+      "Accuracy on training set is 0.5548738922972052\n",
+      "Accuracy on test set is 0.34\n",
+      "**************************************************************************\n",
+      "Accuracy on training set is 0.5698704839809134\n",
+      "Accuracy on test set is 0.6733333333333333\n",
+      "**************************************************************************\n",
+      "Accuracy on training set is 0.5589638718473074\n",
+      "Accuracy on test set is 0.6733333333333333\n",
+      "**************************************************************************\n",
+      "Accuracy on training set is 0.5548738922972052\n",
+      "Accuracy on test set is 0.72\n",
+      "**************************************************************************\n",
+      "Accuracy on training set is 0.5555555555555556\n",
+      "Accuracy on test set is 0.5733333333333334\n",
+      "**************************************************************************\n",
+      "Accuracy on training set is 0.5541922290388548\n",
+      "Accuracy on test set is 0.7366666666666667\n",
+      "**************************************************************************\n",
+      "Accuracy on training set is 0.5480572597137015\n",
+      "Accuracy on test set is 0.6033333333333334\n",
+      "**************************************************************************\n",
+      "Accuracy on training set is 0.5364689843217451\n",
+      "Accuracy on test set is 0.4066666666666667\n",
       "**************************************************************************\n"
      ]
     }
@@ -322,6 +408,39 @@
     "for epoch in range(epochs):\n",
     "    train(model=modelA, train_loader=train_loader, optimizer=optimizer)\n",
     "    test(model=modelA, test_loader=test_loader)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 100,
+   "id": "701738ce-387f-4514-8bc3-96e6aebd871f",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "MyMLP(\n",
+       "  (fc1): Linear(in_features=8, out_features=8, bias=True)\n",
+       "  (fc2): Linear(in_features=8, out_features=1, bias=True)\n",
+       "  (ReLU): ReLU()\n",
+       ")"
+      ]
+     },
+     "execution_count": 100,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "#save the model parameters and weights \n",
+    "\n",
+    "import torchvision.models as models\n",
+    "torch.save(modelA.state_dict(), '/Users/Stephen_Schmit/Documents/SC-BMI/p_eickhoff_sc2021/modelA_weights')\n",
+    "modelA.eval() #sets model to evaluation mode instead of training\n",
+    "\n",
+    "# use below code to load later\n",
+    "# modelA = MyMLP(*args, **kwargs)\n",
+    "# modelA.load_state_dict(torch.load(PATH))"
    ]
   },
   {
